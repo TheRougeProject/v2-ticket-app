@@ -1,0 +1,58 @@
+<script>
+  import { onMount } from 'svelte'
+
+  import { signerAddress, chainData } from 'svelte-ethers-store'
+
+  import Modal from '$components/Modal.svelte'
+
+  import backend, { authed } from '$lib/backend.js'
+
+  let modal
+  const control = {}
+
+  const sign = async () => {
+    try {
+      await backend.signIn()
+    } catch(e) {
+      console.log('sign', e)
+      control.error = true
+    }
+  }
+
+</script>
+
+
+{#if $authed}
+<slot />
+{:else}
+<Modal bind:this={modal} active={!$authed} on:close noCloseButton={true}>
+  <div class="modal-card is-large">
+    <header class="modal-card-head has-background-light">
+      <p class="modal-card-title">EIP712 signature request</p>
+      <button class="delete" on:click={modal.onClose} aria-label="close" ></button>
+    </header>
+    <section class="modal-card-body has-background-light">
+
+    <p class="heading">Your wallet address is {$signerAddress}</p>
+
+    <h3>
+      Please sign an EIP712 message to accept our terms and conditions and let us verify
+      your wallet address.
+      This step is necessary to create or manage a Rouge event.<br />
+      <small class="size-7">[ This allows us to use a fast backend gateway to store your metadata ]</small>
+    </h3>
+
+    </section>
+    <footer class="modal-card-foot">
+      <div class="field" >
+        <a class="button is-primary is-pulled-right" on:click={sign}>Sign</a>
+        {#if control.error}
+        <p class="help is-danger">Failed to verify your signature</p>
+        {:else}
+        <span class="help is-info">Open wallet to start authentification and terms acceptance.</span>
+        {/if}
+      </div>
+    </footer>
+  </div>
+</Modal>
+{/if}

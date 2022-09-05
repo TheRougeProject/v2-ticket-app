@@ -1,0 +1,214 @@
+<script>
+  import { onMount } from 'svelte'
+  import { ethers, constants } from 'ethers'
+
+  import { defaultEvmStores as evm, signerAddress, chainId, chainData } from 'svelte-ethers-store'
+
+  import { browser } from '$app/env'
+  import { goto } from '$app/navigation'
+
+  import backend from '$lib/backend.js'
+  import blockchain from '$lib/blockchain.js'
+  import { formatAmount } from '$lib/enums.js'
+  import { formatAddress } from '$lib/utils'
+
+  import { abiEncodeAuth, abiEncodeChannel } from '@rouge/contracts/rouge'
+
+  import project from '$stores/project.js'
+  import nft from '$stores/nft.js'
+
+  import Project from '$components/Project.svelte'
+  import Icon from '$components/Icon.svelte'
+  import EmptyState from '$components/design/EmptyState.svelte'
+  import Confirm from '$components/design/Confirm.svelte'
+  import Waiting from '$components/Waiting.svelte'
+  import TxButton from '$components/TxAction/Button.svelte'
+  import Slate from '$components/design/Slate.svelte'
+
+  export let data
+
+  $: ({ address } = data)
+
+  $: p = $project[address] || {}
+
+  const deleteChannel = i => {
+    project.updateDraft(address, { ...p, channels: p.channels.filter((c,j) => j !== i) })
+    project.refresh(address)
+  }
+
+  const control = {}
+
+  // TODO move publish to its own lib
+  const publishCtx = async () => {
+
+    try {
+
+      control.isLoading = true
+      control.loadText = 'Uploading metadata...'
+
+      const data = { ...p }
+      Object.keys(data).filter(k => /^_/.test(k)).forEach( k => delete data[k] )
+
+      const { success, cids } = await backend.uploadMeta(data)
+
+      if (!success || !cids || cids.length !== 1) throw new Error('springbok error')
+
+      console.log({ success, cids })
+
+      const auths = [
+        { scope: blockchain.singleton($chainId).interface.getSighash('acquire'), enable: true },
+        { scope: blockchain.singleton($chainId).interface.getSighash('redeem'), enable: true }
+      ].map(a => abiEncodeAuth(a))
+
+      control.isLoading = false
+
+      console.log('channels before encode', data.channels)
+
+      return {
+        call: blockchain.createProjet,
+        URI: `ipfs://${cids[0].cid}`,
+        channels: data.channels.map(v => abiEncodeChannel(v)),
+        auths,
+        onReceipt: rcpt => {
+          // control.loadText = `Your project has been created!`
+          const proxy = rcpt.events.filter(e => e.event === 'ProxyCreation')[0].args.proxy
+          project.add(proxy)
+          project.deleteDraft(address)
+          // projet page in charge of waiting infos loaded ?
+          goto(`/project/${proxy}/`)
+        }
+      }
+
+    } catch (err) {
+      console.log('publishCtx err ', err)
+      control.hasError = true
+      control.loadText = 'Failed to upload your data...'
+      control.loadClose = true
+    }
+
+  }
+
+</script>
+
+
+
+    {#if browser && window.location.hash === 'new'}
+    <article class="message is-primary">
+      <div class="message-body">
+        Your draft event has been created!
+      </div>
+    </article>
+    {/if}
+
+    <Project {p} edit={true} />
+
+    <article class="message is-warning">
+      <div class="message-body">
+        <a class="button is-small is-primary is-outlined is-pulled-right clearfix" href="/project/{address}/edit/">Edit</a>
+        {#if !p.visual}
+        <span class="icon-text"><Icon name="alert-circle" /><span>Your event has no main visual! It is recommended to add a high quality visual.</span></span>
+        {:else}
+        <span class="icon-text"><Icon name="info" /><span>You may edit your draft event as much as you want before publishing.</span></span>
+        {/if}
+      </div>
+    </article>
+
+    <h2 class="title">Ticket sales channel(s)</h2>
+
+    {#if p.channels && p.channels.length}
+
+    {#each p.channels as channel, i}
+
+  <Slate>
+    <p class="subtitle">Channel {channel.label}{#if channel.supply}&nbsp;x{channel.supply}{/if}</p>
+
+    <div slot="info">
+      {channel.amount || 'free'}
+    </div>
+
+    <div slot="actions">
+        <p class="level-item"><small><a href="/project/{address}/channel/{i}">
+          <span class="icon-text"><Icon name="edit" size="12" /><span>Edit</span>
+        </a></small></p>
+        <Confirm
+          let:activate
+          title="Delete ticket sales channel"
+          message="Are you sure you want to delete the ticket sales channel {channel.label}? This action cannot be undone."
+          confirmLabel="Delete"
+          on:confirm={() => deleteChannel(i)}
+        >
+          <p class="level-item"><small><a on:click={activate}>
+            <span class="icon-text"><Icon name="trash" size="12" /><span>Delete</span>
+          </a></small></p>
+        </Confirm>
+    </div>
+  </Slate>
+
+    {/each}
+
+    <div class="level slate">
+      <div class="level-left">
+      </div>
+      <div class="level-right">
+        <div class="level-item">
+          <a class="button is-small is-primary" href="/project/{address}/add-channel/">Add channel</a>
+        </div>
+      </div>
+    </div>
+
+    {:else}
+
+    <EmptyState svg="/empty-box.svg">
+      <h3 class="subtitle"><strong>No tickets yet!</strong></h3>
+      <a class="button is-primary" href="/project/{address}/add-channel/">Add your first channel</a>
+      <p class="help is-info">You need to create at least one ticket sales channel.</p>
+    </EmptyState>
+
+    {/if}
+
+
+    {#if p.channels.length}
+
+    <h2 class="title">Publish your event</h2>
+
+    <article class="message is-danger">
+      <div class="message-body">
+        In this beta version of Rouge dApp, you cannot add or modify channels or change metadata of your event after publish.
+      </div>
+    </article>
+
+    <p>Your event will be deployed on : {$chainData.name }</p>
+
+    <div class="level slate">
+      <div class="level-left">
+       </div>
+       <div class="level-right">
+         <div class="level-item">
+           <h3>
+             <TxButton class="button is-primary" submitCtx={publishCtx}>
+               Publish your event
+             </TxButton>
+           </h3>
+         </div>
+       </div>
+    </div>
+
+    {/if}
+
+
+
+
+<Waiting active={!!control.isLoading}>
+  {#if !control.hasError}
+  <progress class="progress is-small is-primary" max="100"></progress>
+  {/if}
+  <p class="content">{control.loadText}</p>
+  <footer class="modal-card-foot">
+  {#if control.loadCancel}
+  <a class="button is-black">Cancel</a>
+  {/if}
+  {#if control.loadClose}
+  <a class="button is-primary" on:click={() => {control.isLoading = false}}>Close</a>
+  {/if}
+  </footer>
+</Waiting>
