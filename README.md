@@ -1,4 +1,4 @@
-# create-svelte
+# rouge-ticket-dapp
 
 The frontend for ticket app
 
