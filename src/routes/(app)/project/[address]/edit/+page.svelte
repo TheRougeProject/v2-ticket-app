@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte'
 
-  import { goto } from '$app/navigation'
+  //import { goto } from '$app/navigation'
 
   import project from '$stores/project.js'
 
@@ -34,7 +34,8 @@
     })
     project.refresh(address)
 
-    goto(`/project/${address}/draft`)
+    //goto(`/project/${address}/draft`)
+    history.go(-1)
 
   }
 

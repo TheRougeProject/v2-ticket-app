@@ -1,5 +1,5 @@
-import { utils, constants } from 'ethers'
-import { dev } from '$app/env'
+import { utils } from 'ethers'
+import { dev } from '$app/environment'
 
 const baseChainIds = JSON.parse(import.meta.env.VITE_MAINCHAIN_IDS)
 const baseTestnetChainIds = JSON.parse(import.meta.env.VITE_TESTCHAIN_IDS)
@@ -9,7 +9,6 @@ export const getSupportedChainIds = testnets  => {
   if (!testnets) return baseChainIds
   return dev ? [ ...baseChainIds,  ...baseTestnetChainIds, 1337 ] : [ ...baseChainIds,  ...baseTestnetChainIds ]
 }
-
 
 // purely informational
 export const categories = [
@@ -39,9 +38,16 @@ export const categories = [
 export const themes = [
   'Business',
   'Crypto',
-
 ]
 
+
+const _netAbbr = {
+  '42170': 'arb-nova',
+  '1337': 'local',
+}
+
+// TODO should support any format
+export const netAbbr = chain => _netAbbr[`${chain}`] || 'unknown'
 
 // some ux template differ
 export const types = [
@@ -53,7 +59,6 @@ export const types = [
 ]
 
 // TODO support https://tokenlists.org/
-
 
 
 // XXX move to utils ?

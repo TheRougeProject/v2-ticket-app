@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
 
-  import { getChainDataByChainId, signerAddress, chainId } from 'svelte-ethers-store'
+  import { getChainDataByChainId, signerAddress, chainId, chainData } from 'svelte-ethers-store'
 
   import Icon from '$components/Icon.svelte'
   import NFT from '$components/NFT.svelte'
@@ -87,7 +87,7 @@
     <div class="column is-half">
       <EmptyState svg="/no-records.svg">
         <h3 class="subtitle"><strong>No ticket found!</strong></h3>
-        <a class="button is-primary" href="/i/ticket/{chain}-{contract}/">Go buy tickets!</a>
+        <a class="button is-primary" href="/i/ticket/{$chainData.shortName}-{contract}/">Go buy tickets!</a>
       </EmptyState>
     </div>
   </div>
@@ -108,7 +108,7 @@
   </div>
 
   {#if loaded}
-    <a class="button is-primary" href="/i/ticket/{chain}-{contract}/">Buy more tickets...</a>
+    <a class="button is-primary" href="/i/ticket/{$chainData.shortName}-{contract}/">Buy more tickets...</a>
   {/if}
 
   {/if}

@@ -1,10 +1,7 @@
 <script>
-  import { onMount } from 'svelte'
-
   import { getChainDataByChainId, signerAddress, chainId, chainData } from 'svelte-ethers-store'
 
   import blockchain from '$lib/blockchain.js'
-  import { formatAddress } from '$lib/utils'
   import { getSupportedChainIds } from '$lib/enums.js'
 
   import project from '$stores/project.js'
@@ -17,6 +14,10 @@
   import Create from '$components/form/Create.svelte'
   import LoadEvent from '$components/form/LoadEvent.svelte'
   import Address from '$components/design/Address.svelte'
+
+  import Nav from '$components/manager/Nav.svelte'
+
+  import ConfirmUnload from '$components/popins/ConfirmUnload.svelte'
 
   import Icon from '$components/Icon.svelte'
 
@@ -46,45 +47,41 @@
 
 </script>
 
-
 {#if $signerAddress}
 <Create bind:active={createActive} />
 <LoadEvent bind:active={loadActive} on:success={load} />
 {/if}
 
-<nav class="breadcrumb has-succeeds-separator my-0" aria-label="breadcrumbs">
-  <ul>
-    {#if valid}
-    <li class="is-active"><a href="#" aria-current="page">Events</a></li>
-    {:else}
+<Nav>
+  {#if valid}
+    <li class="is-active"><a href="#" aria-current="page">Events manager</a></li>
+  {:else}
     <li class="is-active"><a href="#" aria-current="page">Home</a></li>
-    {/if}
-  </ul>
-</nav>
+  {/if}
+</Nav>
 
 <section class="section has-background-white is-rounded">
 
   {#if valid}
-
-  <div class="level">
+  <div class="level is-mobile">
     <div class="level-left">
       <div class="level-item">
-        <h2 class="title">Events</h2>
       </div>
       <div class="level-item">
-        <button class="button is-primary is-inverted" disabled={!$signerAddress} on:click={openCreate}>Create event</button>
+        <button class="button is-primary " disabled={!$signerAddress} on:click={openCreate}>Create</button>
       </div>
       <div class="level-item">
-        <button class="button is-secondary is-inverted" disabled={!$signerAddress} on:click={openLoad}>Load existing event</button>
+        <button class="button is-primary is-inverted" disabled={!$signerAddress} on:click={openLoad}>Load</button>
       </div>
-      <div class="level-item">
-        <a class="button is-secondary is-inverted" href="/wallet/"><span class="icon-text"><Icon name="wallet" size="24" /><span>NFT tickets</span></a>
-      </div>
-      <div class="level-item">
-        <button class="button is-secondary is-inverted" disabled={!$signerAddress} on:click={blockchain.disconnect}>Disconnect</button>
+    </div>
+    <div class="level-right">
+       <div class="level-item">
+        <a class="button is-primary is-inverted" href="/search/">Search</a>
       </div>
     </div>
   </div>
+
+  <h2 class="title">Loaded events</h2>
 
   {#if !all.length}
     <EmptyState svg="/no-records.svg">
@@ -104,6 +101,7 @@
           <a href="/project/{address}/{ $project[address]._isDraft ? 'draft/' : ''}">
             <figure class="image xis-16by9" style="width: 150px;">
               {#if $project[address].visual}
+              {#key all.length}
               <img
                 data-ipfs={$project[address].visual}
                 src="/empty_p.png"
@@ -111,6 +109,7 @@
                 style="object-fit: cover;"
                 use:ipfs
               />
+              {/key}
               {:else}
               <img
                 src="/empty_p.png"
@@ -150,25 +149,31 @@
         <p class="level-item is-hidden-mobile"><small>·</small></p>
         <Confirm
           let:activate
-          let:close
           title="Delete the draft event?"
           message="Are you sure you want to delete the draft event «{$project[address].name}» and everything you set up? There is no going back."
           confirmLabel="Delete"
-          on:confirm={() => project.deleteDraft(address) && close()}
+          on:confirm={() => project.deleteDraft(address)}
         >
           <p class="level-item"><small><a on:click={activate}>
             <span class="icon-text"><Icon name="trash" /><span>Delete draft</span>
           </a></small></p>
         </Confirm>
         {:else}
-        <p class="level-item"><small><a href="/i/ticket/{$chainId}-{address}/">
-          <span class="icon-text"><Icon name="ticket" /><span>Tickets page</span>
+        <p class="level-item"><small><a href="/i/ticket/{$chainData.shortName}:{address}/">
+          <span class="icon-text"><Icon name="ticket" /><span>Get Tickets</span>
         </a></small></p>
         <p class="level-item is-hidden-mobile"><small>·</small></p>
+        <!--
         <p class="level-item"><small><a href="/project/{address}/scan/">
           <span class="icon-text"><Icon name="scanQr" /><span>Check-In</span>
         </a></small></p>
-        {/if}
+        -->
+        <ConfirmUnload let:activate p={$project[address]} on:confirm={() => project.rm(address)}>
+          <p class="level-item"><small><a on:click={activate}>
+            <span class="icon-text"><Icon name="EyeOff" /><span>Unload & forget</span>
+          </a></small></p>
+        </ConfirmUnload>
+         {/if}
       </div>
     </div>
 

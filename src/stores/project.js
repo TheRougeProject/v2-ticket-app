@@ -5,7 +5,7 @@ import { proxied } from 'svelte-proxied-store'
 import { decodeRoles } from '@rouge/contracts/rouge'
 import { Token, TokenAmount } from '@rouge/contracts/Token'
 
-import { dev, browser } from '$app/env'
+import { dev, browser } from '$app/environment'
 
 import blockchain , { getChainTokens } from '$lib/blockchain'
 import ipfs from '$lib/ipfs'
@@ -31,6 +31,7 @@ const createStore = () => {
     console.log('subscribers count %s', evm.$provider.listenerCount())
   }
 
+
   const add = address => {
     if (addresses.includes(address)) return
     console.log('add project address', address)
@@ -44,7 +45,7 @@ const createStore = () => {
 
   const rm = address => {
     if (!addresses.includes(address)) return
-    console.log('rm project', address)
+    // console.log('rm project', address)
     addresses = [ ...addresses.filter(a => a !== address) ]
     localStorage.setItem(projectsKey(), JSON.stringify(addresses))
     //unwatch(address)
@@ -52,6 +53,9 @@ const createStore = () => {
     emit()
   }
 
+  const isBookmarked = address => addressesAsBearer.includes(address)
+
+  // change to bookmark
   const addBearer = address => {
     if (addressesAsBearer.includes(address)) return
     console.log('add bearer address', address)
@@ -136,7 +140,7 @@ const createStore = () => {
       meta.balances[address] = meta.channels[i].amount.token.newAmount(balances[i], 0)
     }
 
-    console.log(`PARSED data for ${address}`, enabled, meta)
+    console.log(`PARSED data for ${address}`, { enabled, meta, addressesAsBearer })
 
     // const events = await blockchain.rouge(address).queryFilter(
     //   blockchain.rouge(address).filters.AddedChannel() // await $signer.getAddress())
@@ -187,11 +191,12 @@ const createStore = () => {
     }
     lock[address] = false
   }
-
+ 
   const { delete: deleteProperty, assign, subscribe, emit, get, deleteAll } = proxied({
     get: function(target, key) {
-      if (key === 'addresses') return target[key]
-      // console.log('$project proxy => ', {target, key})
+      // XXX optimise pattern matching for speed ?
+      if (key === 'addresses') return target[key] || []
+      if (key === 'addressesAsBearer') return target[key] || []
       if (!target[key]) refresh(key)
       return target[key] || {}
     }
@@ -255,7 +260,6 @@ const createStore = () => {
     if (!$signer || !browser) return
     const account = await $signer.getAddress()
     const { chainId } = await $signer.provider.getNetwork()
-    console.log('XXXX load rouge wallet', { chainId, account })
     addressesAsBearer = JSON.parse(localStorage.getItem(bearerKey(chainId, account)) || '[]')
     addressesAsBearer.forEach(address => watch(address))
     assign({
@@ -279,6 +283,7 @@ const createStore = () => {
     clean,
     add,
     rm,
+    isBookmarked,
     addBearer,
     rmBearer,
     subscribe,

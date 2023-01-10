@@ -23,12 +23,14 @@
 
   body > div.app {
     position: relative;
+    min-height: calc(100vh);
+    xpadding-bottom: 2rem;
   }
 
   .version {
     position: absolute;
-    bottom: 0;
-    right: 0;
+    bottom: 2px;
+    left: 4px;
     a {
       color: #ddd;
     }

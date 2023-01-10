@@ -1,5 +1,5 @@
 <script>
-  import { signerAddress, chainId, chainData } from 'svelte-ethers-store'
+  import { signerAddress, chainData } from 'svelte-ethers-store'
 
   import dayjs from 'dayjs'
   import localizedFormat from 'dayjs/plugin/localizedFormat.js'
@@ -13,6 +13,7 @@
   import EmptyState from '$components/design/EmptyState.svelte'
   import Tickets from '$components/Tickets.svelte'
   import LoadEvent from '$components/form/LoadEvent.svelte'
+  import Confirm from '$components/design/Confirm.svelte'
 
   $: addressesAsBearer = $project.addressesAsBearer || []
 
@@ -32,6 +33,8 @@
 
 </script>
 
+<section class="sectionx">
+
 {#if !$signerAddress}
 
   <EmptyState svg="/bad-connection.svg">
@@ -42,29 +45,27 @@
 
 {:else}
 
-  <LoadEvent bind:active={loadActive} actionLabel="Add" title="Add a missing event in your wallet" on:success={success} />
-        <h2 class="title"><span class="icon-text"><Icon name="wallet" size="24" /><span>Your NFT tickets on {$chainData.name}</span></h2>
+  <LoadEvent bind:active={loadActive} actionLabel="Add" title="Search event and add missing tickets in your book" on:success={success} />
 
   <div class="level">
     <div class="level-left">
+      <h2 class="title">Your tickets book on {$chainData.name}</h2>
+    </div>
+    <div class="level-right">
       <div class="level-item">
+        <div class="level-item">
+          <a class="button is-primary is-inverted" href="/book/search">Missing tickets?</a>
+        </div>
       </div>
-      <div class="level-item">
-        <button class="button is-secondary is-inverted" disabled={!$signerAddress} on:click={openLoad}>Missing tickets?</button>
-      </div>
-      <div class="level-item">
-        <a class="button is-secondary is-inverted" href="/">Events</a>
-      </div>
-      <div class="level-item">
-        <a class="button is-secondary is-inverted" href="/rewards"><Icon class="mr-1" name="Award" />Rewards & Achievements</a>
-      </div>
-
     </div>
   </div>
+
 
   {#if addressesAsBearer && addressesAsBearer.length}
 
     {#each addressesAsBearer as address}
+
+      <hr />
 
       <div class="box level is-slate">
 
@@ -72,11 +73,12 @@
 
           <div class="level-item">
             <a href="/project/{address}/{ $project[address]._isDraft ? 'draft/' : ''}">
+              {#key addressesAsBearer.length}
               <figure class="image xis-16by9" style="width: 150px;">
                 {#if $project[address].visual}
                   <img
                     data-ipfs={$project[address].visual}
-                              src="/empty_p.png"
+                    src="/empty_p.png"
                     alt="Project main visual"
                     style="object-fit: cover;"
                     use:ipfs
@@ -89,13 +91,14 @@
                   />
                 {/if}
               </figure>
+              {/key}
             </a>
           </div>
 
           <div class="level-item">
             <div class="flex is-flex-direction-column is-align-content-space-around summary">
               <div>
-                <strong><a href="/i/ticket/{$chainId}-{address}/">{$project[address].name || '...'}</a></strong>
+                <strong><a href="/i/ticket/{$chainData.shortName}:{address}/">{$project[address].name || '...'}</a></strong>
               </div>
 
               {#if $project[address].when && $project[address].when.length === 2}
@@ -103,7 +106,6 @@
                 from {dayjs($project[address].when[0]).format('LLLL')}<br /> to {dayjs($project[address].when[1]).format('LLLL')}
               </small>
               {/if}
-
             </div>
           </div>
 
@@ -111,22 +113,30 @@
 
         <div class="level-right">
 
-          <p class="level-item">
-            <button on:click={() => tickets[address].load()} disabled={loaders[address] ? true : undefined}  class="button is-small is-primary is-outlined is-pulled-right clearfix" >Refresh</button>
-          </p>
-          <p class="level-item">
-            <a href="/i/ticket/{$chainId}-{address}/" disabled={loaders[address] ? true : undefined}  class="button is-small is-primary is-outlined is-pulled-right clearfix" >Get tickets</a>
-          </p>
-          <!--
-          <p class="level-item">
-            <a href="/i/ticket/{$chainId}-{address}/" disabled={loaders[address] ? true : undefined}  class="button is-small is-primary is-outlined is-pulled-right clearfix" >Add ERC721</a>
-          </p>
-          -->
+          <p class="level-item"><small>
+            <a
+              on:click={() => tickets[address].load()} disabled={loaders[address] ? true : undefined}
+              class="  "><span class="icon-text"><Icon name="Refresh" /><span>Refresh</span></span>
+            </a>
+          </small></p>
+          <p class="level-item"><small>
+            <Confirm
+              let:activate
+              title="Remove from your tickets book?"
+              message="Are you sure you want to remove event «{$project[address].name}»'s tickets from your book & unbookmark the event on this device? (you can always add them back later, it's on the blockchain!)"
+              confirmLabel="Remove & Unbookmark"
+              on:confirm={() => project.rmBearer(address)}
+            >
+              <a on:click={activate}><span class="icon-text"><Icon name="BookmarkOff" /><span>Remove</span></span></a>
+            </Confirm>
+          </small></p>
         </div>
 
       </div>
 
-      <Tickets {address} bind:this={tickets[address]} bind:loading={loaders[address]} />
+      {#key addressesAsBearer.length}
+        <Tickets {address} bind:this={tickets[address]} bind:loading={loaders[address]} />
+      {/key}
 
     {/each}
 
@@ -138,3 +148,14 @@
   {/if}
 
 {/if}
+
+</section>
+
+<style lang="scss">
+
+  .summary {
+    line-height: normal;
+
+  }
+
+</style>

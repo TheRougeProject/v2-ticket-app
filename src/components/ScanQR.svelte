@@ -4,7 +4,7 @@
   import { onMount } from 'svelte'
   import jsQR from 'jsqr'
 
-  import { browser } from '$app/env'
+  import { browser } from '$app/environment'
 
   export let recording = false
   export let visible = true

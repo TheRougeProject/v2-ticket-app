@@ -1,7 +1,8 @@
 import { proxied } from 'svelte-proxied-store'
 
-import { browser, dev } from '$app/env'
+import { browser, dev } from '$app/environment'
 
+// TODO optional encryption ...
 const createStore = () => {
   const { assign, subscribe, emit, get } = proxied()
 

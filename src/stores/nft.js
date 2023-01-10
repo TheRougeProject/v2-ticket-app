@@ -4,7 +4,7 @@ import { constants, utils } from 'ethers'
 import { proxied } from 'svelte-proxied-store'
 import { defaultEvmStores as evm, provider, signer } from 'svelte-ethers-store'
 
-import { dev, prerendering, browser } from '$app/env'
+import { browser } from '$app/environment'
 
 import blockchain from '$lib/blockchain'
 import ipfs from '$lib/ipfs'
@@ -18,9 +18,9 @@ const createStore = () => {
   // add key ?
   const storageKey = () => `rge:nfts:${evm.$chainId}`
 
-  const load = async (key) => {
+  const refresh = async key => {
     try {
-      if (lock[key] || !browser) return
+      if (!browser || lock[key]) return
       const [ contract, tokenId ]=  key.split(':')
 
       // TODO only work with hexify tokenId
@@ -47,7 +47,7 @@ const createStore = () => {
     get: function(target, key) {
       if (key === 'keys') return target[key]
       // console.log('$nft proxy => ', {target, key})
-      if (!target[key]) load(key)
+      if (!target[key]) refresh(key)
       return target[key] || {}
     }
   })
@@ -93,6 +93,7 @@ const createStore = () => {
     purge,
     clean,
     add,
+    refresh,
     subscribe
   }
 

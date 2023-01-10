@@ -6,8 +6,7 @@ const config = {
   preprocess: sveltePreprocess({}),
   kit: {
     prerender: {
-      onError: 'continue', // | ((details: RequestDetails) => void | never);
-      default: true
+      handleHttpError: 'warn', // | ((details: RequestDetails) => void | never);
     },
     adapter: adapter({
       pages: '.build',

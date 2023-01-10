@@ -8,11 +8,21 @@
   export let title
   export let image
   export let handler
+  export let minWidth
+  export let minHeight
+  export let factor = 1
 
-  let crop = { x: 0, y: 0 };
-  let cropSize = { width: 768, height: 432 };
-  let zoom = 1
-  let factor = 0.5
+  let crop
+  let cropSize
+  let zoom
+
+  export const reset = () => {
+    crop = { x: 0, y: 0 }
+    cropSize = { width: minWidth, height: minHeight }
+    zoom = 1
+  }
+
+  reset()
 
   const doCrop = async () => {
     const tmpCanvas = document.createElement('canvas')
@@ -43,14 +53,6 @@
   let width
   let height
 
-  export const reset = () => {
-    crop = { x: 0, y: 0 };
-    cropSize = { width: 768, height: 432 };
-    zoom = 1
-    factor = 0.5
-  }
-
-
   const onComplete = (e) => {
     // only log in this version
     void({ pixels: { width, height } } = e.detail)
@@ -59,7 +61,6 @@
 
   let modal
   let cropper
-
 
 </script>
 

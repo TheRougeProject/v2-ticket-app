@@ -16,7 +16,7 @@ import IERC1155 from '@rouge/contracts/IERC1155.json'
 import { Token } from '@rouge/contracts/Token'
 import { setLogger } from '@rouge/contracts/rouge'
 
-import { dev, prerendering, browser } from '$app/env'
+import { dev, browser } from '$app/environment'
 
 import { getSupportedChainIds } from '$lib/enums.js'
 
@@ -24,6 +24,7 @@ import { getSupportedChainIds } from '$lib/enums.js'
 
 import registry from '$stores/registry.js'
 import project from '$stores/project.js'
+import account from '$stores/account.js'
 
 //import { explorer, formatEth, toWei, formatIpfsHash } from '$lib/utils'
 
@@ -45,7 +46,6 @@ const createBlockchain = () => {
 
   const isDev = () => {
     if (dev) return true
-    //if ($walletStore.roles.includes('DEV')) return true
     return false
   }
   const isTest = () => {
@@ -128,6 +128,12 @@ const createBlockchain = () => {
       setTimeout(() => autoConnect(chainId, attempt + 1), 500)
       return
     }
+    if (!chainId) {
+      let defaultChain = registry.get('defaultChain')
+      if (!defaultChain) return
+      chainId = utils.isHexString(defaultChain) ? parseInt(defaultChain, 16) : defaultChain
+      console.log('find default chain', chainId)
+    }
     console.log('AUTO CONNECTING TO chain', chainId, wallet)
     return wallet.autoConnect(chainId)
   }
@@ -136,8 +142,9 @@ const createBlockchain = () => {
 
   const handlers = {
     Transfer: (address, fragment, event) => {
-      console.log('*** Transfer ***', address, fragment, event)
-
+      const { from, to, tokenId } = event
+      account.invalidate(address, to)
+      account.invalidate(address, from)
     },
     Acquired: (address, fragment, event) => {
       console.log('*** Acquired ***', address, fragment, event)
@@ -306,7 +313,7 @@ const createBlockchain = () => {
 
     if (dev) {
       // TODO depending on prod or not + reporting
-      setLogger({ fatal: console.error, ...console })
+      // setLogger({ fatal: console.error, ...console })
     }
 
     // TODO autoconnect ?

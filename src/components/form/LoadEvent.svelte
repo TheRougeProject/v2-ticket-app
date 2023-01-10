@@ -1,7 +1,7 @@
 <script>
   import { onMount, createEventDispatcher } from 'svelte'
 
-  import { defaultEvmStores as evm, signerAddress, chainId, chainData } from 'svelte-ethers-store'
+  import { chainData } from 'svelte-ethers-store'
 
   import blockchain from '$lib/blockchain.js'
   import project from '$stores/project.js'
@@ -40,9 +40,15 @@
       console.log('detecting link', matchLink[1])
       if (await candidate(matchLink[1])) return
     }
+    const matchId = input.match(/\/i\/ticket\/[\w-]+:(0x[A-Fa-f0-9]{40})\b/)
+    if (matchId) {
+      console.log('detecting id', matchId[0], matchId[1])
+      if (await candidate(matchId[1])) return
+    }
     const matchAddress = input.match(/\b(0x[A-Fa-f0-9]{40})\b/)
     if (matchAddress) {
-      console.log('detecting link', matchAddress[1])
+      console.log('detecting address', matchAddress[1])
+      // TODO check if ticket type ...
       if (await candidate(matchAddress[1])) return
     }
     control.error = true
@@ -83,10 +89,10 @@
 
         <div class="column is-full">
           <div class="field" >
-            <label class="label">Contract address or event link or ticket code</label>
+            <label class="label">Enter event id, event link, contract address or ticket code</label>
             <p class="control">
               <input class="input" class:is-danger={control.error}
-                     type="text" bind:value={input} placeholder="Contract address or event link or ticket code" >
+                     type="text" bind:value={input} placeholder="Event id, event link, contract address or ticket code" >
             </p>
             {#if control.error}<p class="help is-danger">This input doesn't match any event on {$chainData.name}</p>{/if}
           </div>

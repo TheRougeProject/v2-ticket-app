@@ -5,6 +5,7 @@
 
   export let title = 'Drop files here'
   export let buttonLabel = 'Choose files'
+  export let buttonClass = undefined
   export let accept
   export let minSize
   export let maxSize
@@ -32,7 +33,7 @@
     on:dropaccepted
   >
   <slot />
-  <button class="button" outlined on:click={open}>{buttonLabel}</button>
+  <button class="button {buttonClass}" outlined on:click={open}>{buttonLabel}</button>
   </Dropzone>
 </div>
 

@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte'
+  import { onMount, createEventDispatcher } from 'svelte'
 
   import { signerAddress, chainData } from 'svelte-ethers-store'
 
@@ -9,12 +9,15 @@
 
   let modal
   const control = {}
+  const dispatch = createEventDispatcher()
 
   const sign = async () => {
     try {
       await backend.signIn()
+      // allow callback from upstream component (modal is already null)
+      dispatch('close')
     } catch(e) {
-      console.log('sign', e)
+      console.log('sign error', e)
       control.error = true
     }
   }
@@ -38,7 +41,7 @@
     <h3>
       Please sign an EIP712 message to accept our terms and conditions and let us verify
       your wallet address.
-      This step is necessary to create or manage a Rouge event.<br />
+      This step is necessary to create search or manage a Rouge event.<br />
       <small class="size-7">[ This allows us to use a fast backend gateway to store your metadata ]</small>
     </h3>
 

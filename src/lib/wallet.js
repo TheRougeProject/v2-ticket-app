@@ -10,14 +10,14 @@ import gnosisModule from '@web3-onboard/gnosis'
 
 import { ethers, utils } from 'ethers'
 
-import { dev } from '$app/env'
+import { dev } from '$app/environment'
 
 import { getSupportedChainIds } from '$lib/enums.js'
 
 import { defaultEvmStores as evm, getChainDataByChainId } from 'svelte-ethers-store'
 import registry from '$stores/registry.js'
 
-import { metisBlack, arbitrum, arbitrumNova } from '$icons/strings.js'
+import { metisBlack, arbitrum, arbitrumNova, foxWallet } from '$icons/strings.js'
 
 // polyfill Buffer for Walletconnect
 import { Buffer } from 'buffer'
@@ -38,6 +38,14 @@ export const wrapper = () => {
   let onboard
   let currentWallet
 
+  // move to config
+  /*const rpcUrls = {
+    5: "https://goerli.infura.io/v3/10ca059f4a824d0890d22ffc3128b2fa",
+    588: "https://stardust.metis.io/?owner=588",
+    42170: 'https://nova.arbitrum.io/rpc',
+    421613: 'https://goerli-rollup.arbitrum.io/rpc',
+    }*/
+
   const overrides = {
     1337: {
       token: 'ETH',
@@ -57,9 +65,20 @@ export const wrapper = () => {
     ])
   }
 
+  const foxwallet = {
+    label: 'FoxWallet',
+    injectedNamespace: 'ethereum',
+    checkProviderIdentity: ({ provider }) => !!provider && !!provider.isFoxWallet,
+    getIcon: () => foxWallet,
+    getInterface: () => ({ provider: window.ethereum }),
+    platforms: ['mobile']
+  }
+
   const init = async () => {
 
-    const injected = injectedModule()
+    const injected = injectedModule({
+        custom: [foxwallet]
+    })
     const gnosis = gnosisModule()
 
     // initialize the module with options
@@ -101,14 +120,15 @@ export const wrapper = () => {
         }
       },
       appMetadata: {
-        name: 'Rouge App',
-        icon: 'https://rouge.network/logo.svg',
+        name: 'Rouge Ticket',
+        icon: '/logo.svg',
+        logo: 'https://rouge.network/icon-512.png',
         //logo: icon,  side logo todo
         description: 'Create & manage events on Web3',
         explore: 'https://rouge.network/',
         recommendedInjectedWallets: [
           { name: 'MetaMask', url: 'https://metamask.io' },
-          { name: 'Coinbase', url: 'https://wallet.coinbase.com/' }
+          //{ name: 'Coinbase', url: 'https://wallet.coinbase.com/' }
         ]
       },
     })
@@ -132,6 +152,7 @@ export const wrapper = () => {
     console.log('setting wallet', wallet.provider)
     await evm.setProvider(wallet.provider, wallet.accounts[0].address)
     currentWallet = getFingerPrint(wallet)
+    registry.set('defaultChain', wallet.chains[0].id)
     window.localStorage.setItem(
       `rge:defaultWallet:${wallet.chains[0].id}`,
       wallet.label
@@ -146,6 +167,7 @@ export const wrapper = () => {
       const wallets = await onboard.connectWallet({
         autoSelect: { label: defaultWallet, disableModals: true }
       })
+      const success = await onboard.setChain({ chainId })
       evmConnect(wallets[0])
     }
   }
@@ -173,10 +195,14 @@ export const wrapper = () => {
 
   const disconnect = async () => {
     const { wallets } = onboard.state.get()
+    const chainId = wallets[0].chains[0].id
+    window.localStorage.removeItem(`rge:defaultWallet:${chainId}`)
+    registry.set('defaultChain', null)
     return onboard.disconnectWallet({ label: wallets[0].label })
   }
 
   return {
+    get onboard () { return onboard },
     init,
     connect,
     autoConnect,

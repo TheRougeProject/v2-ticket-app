@@ -1,5 +1,6 @@
 
 import { utils } from 'ethers'
+import { tick } from "svelte"
 
 import dayjs from 'dayjs'
 import localizedFormat from 'dayjs/plugin/localizedFormat.js'
@@ -17,6 +18,15 @@ export const dataURLtoBlob = dataurl => {
     u8arr[n] = bstr.charCodeAt(n);
   }
   return new Blob([u8arr], {type:mime});
+}
+
+// compat goto
+export const goto = async path => {
+  await tick()
+  console.log(`History.state`, history.state)
+  history.pushState({name: 'utils'}, '', path)
+  console.log(`History.state`, history.state)
+  await tick()
 }
 
 export const setClipboard = value => {
@@ -42,6 +52,17 @@ export const formatAddress = (a = '', short = true) => {
   } catch (e) {
     return ''
   }
+}
+
+export const formatHash = (h) => {
+  if (!h) return h
+  return h.substr(0, 6) + '...' + h.substr(60, 4)
+}
+
+// use UTF8 …
+export const formatTextMaxLength = (text = '', max = 100) => {
+  if (text.length < max) return text
+  return text.slice(0, max - 1) + '…'
 }
 
 

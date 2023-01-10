@@ -3,8 +3,10 @@
 
   import { defaultEvmStores as evm } from 'svelte-ethers-store'
 
-  import { dev } from '$app/env'
-  import { goto } from '$app/navigation'
+  import { dev } from '$app/environment'
+
+  //import { goto } from '$app/navigation'
+  import { goto } from '$lib/utils'
 
   import Modal from '$components/Modal.svelte'
   import Project from '$components/form/Project.svelte'
@@ -20,8 +22,6 @@
 
   const create = async () => {
     if (!await form.validate()) return
-
-    console.log('create ok', data)
 
     const address = await project.createDraft(data)
     goto(`/project/${address}/draft#new`)

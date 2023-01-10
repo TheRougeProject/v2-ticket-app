@@ -2,8 +2,7 @@
   import { onMount } from 'svelte'
 
   import { defaultEvmStores as evm } from 'svelte-ethers-store'
-
-  import { dev } from '$app/env'
+  import dayjs from 'dayjs'
 
   import backend from '$lib/backend.js'
   import { categories, types } from '$lib/enums.js'
@@ -20,7 +19,8 @@
 
   const control = {
     isWaiting: false,
-    error: {}
+    error: {},
+    warned: {}
   }
 
   let cropper
@@ -65,7 +65,23 @@
 
     if (!data.when[0] || !data.when[1]) {
       control.error.when = 'Event starting and ending date and time are all required'
+    } else {
+
+      const from = dayjs(data.when[0])
+      const to = dayjs(data.when[1])
+
+      if (to.isBefore(from)) {
+        control.error.when = 'Event ending date and time must be after start'
+        return
+      }
+
+      if (from.isBefore(dayjs()) && !control.warned.date) {
+        control.error.when = 'Your event start in the past. If you are sure, click again...'
+        control.warned.date = true
+        return
+      }
     }
+
 
     if (!data.online) {
       if (!data.address) {
@@ -86,19 +102,15 @@
       data.url = 'http://' + data.url
     }
 
-    console.log('control', control)
-
     if (Object.keys(control.error).length > 0) return false
-
-    control.isWaiting = true
-    control.loadText = edit ? 'Updating your draft event...' : 'Creating your draft event...'
 
     if (control.croppedVisual) data.visual = control.croppedVisual
 
     if (/^data:image/.test(data.visual)) {
+      control.isWaiting = true
+      control.loadText = edit ? 'Updating your draft event...' : 'Creating your draft event...'
 
-      const upload = await backend.uploadMeta(data)
-      console.log('upload answer', upload)
+      const upload = await backend.uploadFile(data.visual)
 
       if (upload && upload.success) {
         if (data._isDraft) {
@@ -119,7 +131,7 @@
 
   let cropActive = false
   let cropHandler = cropped => {
-    console.log('received cropped visual', cropped.width)
+    // console.log('received cropped visual', cropped.width)
     control.croppedVisual = cropped
   }
 
@@ -140,7 +152,11 @@
   title="Resize & Crop your visual"
   image={data.visual}
   handler={cropHandler}
+  minWidth={768}
+  minHeight={432}
+  factor={0.5}
 />
+
 
 <h3 class="subtitle mt-4">When?</h3>
 <div class="columns is-multiline">
@@ -152,6 +168,7 @@
         <p class="control" class:has-error={control.error.when} >
           <input class:is-danger={control.error.when} class="input" type="datetime-local"
                  placeholder="Event start date & time"
+                 on:change={() => {control.warned.date = false}}
                  bind:value={data.when1}>
         </p>
       </div>
@@ -162,8 +179,10 @@
         <p class="control" class:has-error={control.error.when} >
           <input class:is-danger={control.error.when} class="input" type="datetime-local"
                  placeholder="Evenr end date & time"
+                 on:change={() => {control.warned.date = false}}
                  bind:value={data.when2}>
         </p>
+        {#if control.error.when}<p class="help is-danger">{control.error.when}</p>{/if}
       </div>
     </div>
   {:else}
@@ -171,7 +190,10 @@
       <div class="field" >
         <label class="label">Date & time</label>
         <p class="control" class:has-error={control.error.when} >
-          <Calendar type="datetime" bind:value={data.when} isRange={true} />
+          <Calendar type="datetime"
+                    bind:value={data.when} isRange={true}
+                    on:changed={() => {control.warned.date = false}}
+          />
         </p>
         {#if control.error.when}<p class="help is-danger">{control.error.when}</p>{/if}
       </div>

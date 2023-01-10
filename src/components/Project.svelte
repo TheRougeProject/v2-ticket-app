@@ -4,9 +4,7 @@
   import dayjs from 'dayjs'
   import localizedFormat from 'dayjs/plugin/localizedFormat.js'
 
-  import { page } from '$app/stores'
-
-  // import { signer, signerAddress, connected, chainId } from 'svelte-ethers-store'
+  import { netAbbr } from '$lib/enums.js'
 
   import { clickoutside } from '$lib/actions/clickoutside.js'
   import { ipfs } from '$lib/actions/ipfs.js'
@@ -21,7 +19,7 @@
 
   dayjs.extend(localizedFormat)
 
-  $: url = `${import.meta.env.VITE_PUBLIC_URL}i/ticket/${p._chainId}-${p._address}`
+  $: url = `${import.meta.env.VITE_PUBLIC_URL}i/ticket/${netAbbr(p._chainId)}:${p._address}`
 
   let calendarMenu = false
 
@@ -100,6 +98,7 @@
     <Icon name="map-pin" size="12" /><span>Address todo</span>
     {/if}
 
+    {#if !p._isDraft}
     <p class="oneLine"><span class="icon-text side-menu">
       <span>Share event</span>
       <ClipboardCopy let:copy text={url} tootipLabel="copied!">
@@ -117,6 +116,7 @@
         {/if}
       </Share>
     </span></p>
+    {/if}
 
     {:else}
 

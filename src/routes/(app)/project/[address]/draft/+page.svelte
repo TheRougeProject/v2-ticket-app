@@ -1,16 +1,14 @@
 <script>
-  import { onMount } from 'svelte'
-  import { ethers, constants } from 'ethers'
 
-  import { defaultEvmStores as evm, signerAddress, chainId, chainData } from 'svelte-ethers-store'
+  import Mustache from 'mustache'
+  import { chainId, chainData } from 'svelte-ethers-store'
 
-  import { browser } from '$app/env'
+  import { browser } from '$app/environment'
   import { goto } from '$app/navigation'
 
   import backend from '$lib/backend.js'
   import blockchain from '$lib/blockchain.js'
-  import { formatAmount } from '$lib/enums.js'
-  import { formatAddress } from '$lib/utils'
+  import { ipfs } from '$lib/actions/ipfs.js'
 
   import { abiEncodeAuth, abiEncodeChannel } from '@rouge/contracts/rouge'
 
@@ -37,6 +35,15 @@
   }
 
   const control = {}
+
+  const buildImage = async () => {
+    console.log({ p })
+
+    const template = " eee {{ x }} fff "
+    var rendered = Mustache.render(template, { x: 'Luke' });
+    console.log( rendered )
+
+  }
 
   // TODO move publish to its own lib
   const publishCtx = async () => {
@@ -90,43 +97,55 @@
 
 </script>
 
-
-
-    {#if browser && window.location.hash === 'new'}
-    <article class="message is-primary">
-      <div class="message-body">
-        Your draft event has been created!
-      </div>
-    </article>
-    {/if}
-
-    <Project {p} edit={true} />
-
-    <article class="message is-warning">
-      <div class="message-body">
-        <a class="button is-small is-primary is-outlined is-pulled-right clearfix" href="/project/{address}/edit/">Edit</a>
-        {#if !p.visual}
-        <span class="icon-text"><Icon name="alert-circle" /><span>Your event has no main visual! It is recommended to add a high quality visual.</span></span>
-        {:else}
-        <span class="icon-text"><Icon name="info" /><span>You may edit your draft event as much as you want before publishing.</span></span>
-        {/if}
-      </div>
-    </article>
-
-    <h2 class="title">Ticket sales channel(s)</h2>
-
-    {#if p.channels && p.channels.length}
-
-    {#each p.channels as channel, i}
-
-  <Slate>
-    <p class="subtitle">Channel {channel.label}{#if channel.supply}&nbsp;x{channel.supply}{/if}</p>
-
-    <div slot="info">
-      {channel.amount || 'free'}
+{#if browser && window.location.hash === 'new'}
+  <article class="message is-primary">
+    <div class="message-body">
+      Your draft event has been created!
     </div>
+  </article>
+{/if}
 
-    <div slot="actions">
+<Project {p} edit={true} />
+
+<article class="message is-warning">
+  <div class="message-body">
+    <a class="button is-small is-primary is-outlined is-pulled-right clearfix" href="/project/{address}/edit/">Edit</a>
+    {#if !p.visual}
+      <span class="icon-text"><Icon name="alert-circle" /><span>Your event has no main visual! It is recommended to add a high quality visual.</span></span>
+    {:else}
+      <span class="icon-text"><Icon name="info" /><span>You may edit your draft event as much as you want before publishing.</span></span>
+    {/if}
+  </div>
+</article>
+
+<h2 class="title">Ticket sales channel(s)</h2>
+
+{#if p.channels && p.channels.length}
+
+  {#each p.channels as channel, i}
+
+    <Slate>
+
+      <nav class="level subtitle">
+        <div class="level-left">
+          {#if channel.icon}
+            <div class="level-item">
+              <figure class="image is-48x48">
+                <img data-ipfs={channel.icon} use:ipfs />
+              </figure>
+            </div>
+          {/if}
+          <div class="level-item">
+            <p class="subtitle">{channel.label}{#if channel.supply}&nbsp;x{channel.supply}{/if}</p>
+          </div>
+        </div>
+      </nav>
+
+      <div slot="info">
+        {channel.amount || 'free'}
+      </div>
+
+      <div slot="actions">
         <p class="level-item"><small><a href="/project/{address}/channel/{i}">
           <span class="icon-text"><Icon name="edit" size="12" /><span>Edit</span>
         </a></small></p>
@@ -141,74 +160,77 @@
             <span class="icon-text"><Icon name="trash" size="12" /><span>Delete</span>
           </a></small></p>
         </Confirm>
-    </div>
-  </Slate>
-
-    {/each}
-
-    <div class="level slate">
-      <div class="level-left">
       </div>
-      <div class="level-right">
-        <div class="level-item">
-          <a class="button is-small is-primary" href="/project/{address}/add-channel/">Add channel</a>
-        </div>
+    </Slate>
+
+  {/each}
+
+  <div class="level slate">
+    <div class="level-left">
+    </div>
+    <div class="level-right">
+      <div class="level-item">
+        <a class="button is-small is-primary" href="/project/{address}/add-channel/">Add channel</a>
       </div>
     </div>
+  </div>
 
-    {:else}
+{:else}
 
-    <EmptyState svg="/empty-box.svg">
-      <h3 class="subtitle"><strong>No tickets yet!</strong></h3>
-      <a class="button is-primary" href="/project/{address}/add-channel/">Add your first channel</a>
-      <p class="help is-info">You need to create at least one ticket sales channel.</p>
-    </EmptyState>
+  <EmptyState svg="/empty-box.svg">
+    <h3 class="subtitle"><strong>No tickets yet!</strong></h3>
+    <a class="button is-primary" href="/project/{address}/add-channel/">Add your first channel</a>
+    <p class="help is-info">You need to create at least one ticket sales channel.</p>
+  </EmptyState>
 
-    {/if}
+{/if}
 
 
-    {#if p.channels.length}
+{#if p.channels.length}
 
-    <h2 class="title">Publish your event</h2>
+  <h2 class="title">Publish your event</h2>
 
-    <article class="message is-danger">
-      <div class="message-body">
-        In this beta version of Rouge dApp, you cannot add or modify channels or change metadata of your event after publish.
-      </div>
-    </article>
-
-    <p>Your event will be deployed on : {$chainData.name }</p>
-
-    <div class="level slate">
-      <div class="level-left">
-       </div>
-       <div class="level-right">
-         <div class="level-item">
-           <h3>
-             <TxButton class="button is-primary" submitCtx={publishCtx}>
-               Publish your event
-             </TxButton>
-           </h3>
-         </div>
-       </div>
+  <article class="message is-danger">
+    <div class="message-body">
+      In this beta version of Rouge dApp, you cannot add or modify channels or change metadata of your event after publish.
     </div>
+  </article>
 
-    {/if}
+  <p>Your event will be deployed on : {$chainData.name }</p>
 
+  <div class="level slate">
+    <div class="level-left">
+    </div>
+    <div class="level-right">
+      <div class="level-item">
+        <h3>
+          <TxButton class="button is-primary" submitCtx={publishCtx}>
+            Publish your event
+          </TxButton>
+        </h3>
+      </div>
+    </div>
+  </div>
+
+{/if}
+
+{#if false}
+  <a class="button is-primary" on:click={buildImage}>Test image</a>
+{/if}
 
 
 
 <Waiting active={!!control.isLoading}>
   {#if !control.hasError}
-  <progress class="progress is-small is-primary" max="100"></progress>
+    <progress class="progress is-small is-primary" max="100"></progress>
   {/if}
   <p class="content">{control.loadText}</p>
   <footer class="modal-card-foot">
-  {#if control.loadCancel}
-  <a class="button is-black">Cancel</a>
-  {/if}
-  {#if control.loadClose}
-  <a class="button is-primary" on:click={() => {control.isLoading = false}}>Close</a>
-  {/if}
+    {#if control.loadCancel}
+      <a class="button is-black">Cancel</a>
+    {/if}
+    {#if control.loadClose}
+      <a class="button is-primary" on:click={() => {control.isLoading = false}}>Close</a>
+    {/if}
   </footer>
 </Waiting>

@@ -1,7 +1,10 @@
 
-import { browser } from '$app/env'
+import { browser } from '$app/environment'
 
 import blockchain from '$lib/blockchain.js'
+
+// default prerender
+export const prerender = false
 
 const initBrowser = async () => {
 

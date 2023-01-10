@@ -1,9 +1,9 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
+  import { utils } from 'ethers'
 
-  import { getChainDataByChainId, signerAddress, chainId } from 'svelte-ethers-store'
+  import { signerAddress, chainData } from 'svelte-ethers-store'
 
-  import Icon from '$components/Icon.svelte'
   import NFT from '$components/NFT.svelte'
   import EmptyState from '$components/design/EmptyState.svelte'
 
@@ -13,22 +13,26 @@
   import nft from '$stores/nft.js'
 
   export let address
+  export let bearer
   export let loading = true
 
   $: p = $project[address] || {}
 
-  $: nfts = $nft.keys ? $nft.keys.filter(key => key.split(':')[0] === address && $nft[key].owner === $signerAddress) : []
-
-  const remove = () => project.rmBearer(address)
+  $: nfts = $nft.keys ? $nft.keys.filter(key => key.split(':')[0] === address && $nft[key].owner === bearer) : []
 
   export const load = async () => {
     loading = true
+    if (!bearer) {
+      bearer = $signerAddress
+    } else {
+      bearer = utils.getAddress(bearer)
+    }
     const project = blockchain.rouge(address)
     // auto discovery potential NFT
-    const events = await project.queryFilter(project.filters.Transfer(null, $signerAddress), 0)
+    const events = await project.queryFilter(project.filters.Transfer(null, bearer), 0)
     for (const e of events) {
       const owner = await project.ownerOf(e.args.tokenId)
-      if (owner === $signerAddress) {
+      if (owner === bearer) {
         nft.add(`${address}:${e.args.tokenId}`)
       }
     }
@@ -46,7 +50,6 @@
     <div class="column is-half">
       <EmptyState svg="/no-records.svg">
         <h3 class="subtitle"><strong>No ticket found!</strong></h3>
-        <button on:click={remove} class="button is-primary">Remove event from wallet</button>
       </EmptyState>
     </div>
   </div>
@@ -62,6 +65,10 @@
     {#if loading}
       <div class="column is-4">
         <div class="box"><span class="box loader mx-auto"></span></div>
+      </div>
+    {:else}
+      <div class="column is-4 is-flex is-align-items-center is-justify-content-center">
+        <a href="/i/ticket/{$chainData.shortName}:{address}/" class="button is-small is-primary is-outlined">Get more tickets</a>
       </div>
     {/if}
   </div>

@@ -29,8 +29,22 @@
   {:else if tabler && tabler[name]}
   <svelte:component this={tabler[name]} {color} strokeWidth={stroke} />
   {:else if feather && feather[name]}
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width={stroke} stroke-linecap="round" stroke-linejoin="round" class="feather feather-{name}">
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} stroke-width={stroke} stroke-linecap="round" stroke-linejoin="round" class="feather feather-{name}">
     {@html feather[name].contents }
   </svg>
   {/if}
 </span>
+
+<style lang="scss" global>
+
+  .icon.is-superlarge {
+    height: 4rem;
+    width: 4rem;
+  }
+
+  .icon-tabler {
+    height: 100%;
+    width: 100%;
+  }
+
+</style>

@@ -1,10 +1,11 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
+  import { utils, constants } from 'ethers'
 
   import dayjs from 'dayjs'
   import localizedFormat from 'dayjs/plugin/localizedFormat.js'
 
-  import { signer, signerAddress, connected, chainId } from 'svelte-ethers-store'
+  import { signer, signerAddress, connected, chainId, chainData } from 'svelte-ethers-store'
 
   import Connected from '$components/Connected.svelte'
   import Icon from '$components/Icon.svelte'
@@ -17,13 +18,12 @@
   import TxActionButton from '$components/TxAction/TxActionButton.svelte'
   import TxActionFeedback from '$components/TxAction/TxActionFeedback.svelte'
 
-  import { getStamp, decodeAnnotatedProof, abiEncodeCertificate } from '@rouge/contracts/rouge'
+  import { getStamp, decodeAnnotated, decodeAnnotatedProof, abiEncodeCertificate } from '@rouge/contracts/rouge'
 
   import blockchain from '$lib/blockchain.js'
 
   import project from '$stores/project.js'
   import cache from '$stores/nft.js'
-  import secret from '$stores/secret.js'
 
   dayjs.extend(localizedFormat)
 
@@ -33,10 +33,13 @@
 
   let scanner
   let recording = false
+  let action
 
-  let proof
   let bearer
   let tokenId
+  let did
+  let proof
+  let certificate
 
   const control = {
     detected: false,
@@ -50,24 +53,52 @@
     console.log('onQR', data, p)
 
     try {
-      const decoded = await decodeAnnotatedProof(data)
+      const decoded = await decodeAnnotated(data)
 
       if (decoded.contract !== p._address) {
         throw new Error('not a valid ticket [1]')
       }
 
-      void({ bearer, tokenId, proof } = decoded)
+      // more test like already used etc
 
-      //void({ bearer, tokenId, proof, ...args } = await decodeAnnotatedProof(data))
-      console.log('onQR', { bearer, tokenId, proof })
+      if (decoded.v) {
+        let expire, selector, v, r, s
+        // certificate case
+        void({ bearer, tokenId, expire, selector, v, r, s } = decoded)
+        console.log('onQR [ certificate ]', {  bearer, tokenId, expire, selector, v, r, s })
 
-      // TODO function in contract to check proof...
-      const x = await blockchain.rouge(p._address).validTokenProof(tokenId, proof)
-      console.log('valid proof ? ', x)
+        proof = constants.HashZero
 
-      // TODO already checkedin  getTokenInfos
+        certificate = abiEncodeCertificate({
+          from: bearer,
+          tokenId,
+          selector,
+          expire,
+          r,
+          s,
+          v
+        })
 
 
+      } else {
+
+        void({ bearer, tokenId, proof } = decoded)
+
+        console.log('onQR [ proof ]', { bearer, tokenId, proof })
+
+        certificate = abiEncodeCertificate()
+
+        // TODO function in contract to check proof...
+        const x = await blockchain.rouge(p._address).validTokenProof(tokenId, proof)
+
+        //console.log('valid proof ? ', x)
+
+        // TODO already checkedin  getTokenInfos
+
+      }
+
+      did = `did:rge:${$chainData.shortName}-${p._address}-${tokenId}`
+      console.log('onQR [ done ]', { did, proof, certificate })
       control.valid = true
 
     } catch (e) {
@@ -78,30 +109,34 @@
 
   const redeemCtx = async () => {
     const params = [[
-      [ tokenId, proof, abiEncodeCertificate() ]
+      [ tokenId, proof, certificate ]
     ]]
-    // console.log('xxx', proof, params)
-
     return {
       call: blockchain.rouge(p._address).redeem,
       params,
       onError: (err, rcpt = {}) => {
         console.log('tx error', err)
         //control.loadText = `Failed....`
+      },
+      onReceipt: () => {
+        // update redeem count & co
+        project.refresh(p._address)
+        cache.refresh(`${p._address}:${tokenId}`)
       }
     }
   }
 
   const next = () => {
+    control.accepted = false
     control.detected = false
     tokenId = null
+    certificate = null
     proof = null
+    action.reset()
     scanner.start()
   }
 
-
   onMount( () => {
-
     const data = localStorage.getItem('rge:dev:qrData')
     if (data) {
       onQR({ detail: { data }})
@@ -121,7 +156,7 @@
   <div class="card-content">
     <div class="media">
       <div class="media-left">
-        <QR text={proof} class="is-128x128"/>
+        <QR text={did} class="is-128x128"/>
       </div>
       <div class="media-content">
         <p class="title is-4">Ticket {channel.label || ''}</p>
@@ -129,14 +164,6 @@
         <p class="subtitle is-7">{(nft?.owner||'')}</p>
       </div>
     </div>
-    <!-- -
-         <div class="content">
-         Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-         <a href="#">#css</a> <a href="#">#responsive</a>
-         <br>
-         <time datetime="2016-1-1">11:09 PM - 1 Jan 2016</time>
-         </div>
-    -->
   </div>
 </div>
 {:else}
@@ -153,12 +180,15 @@
 
 {/if}
 
-
-<TxAction let:callId submitCtx={redeemCtx} on:success={() => {}} disabled={!rw}>
+<TxAction bind:this={action} let:callId submitCtx={redeemCtx} on:success={() => { control.accepted = true }} disabled={!rw}>
   <div class="buttons has-addons is-centered mt-4">
-    {#if proof}
-      <TxActionButton class="button is-primary">Redeem onchain</TxActionButton>
-      <button class="button"  on:click={next}>Ignore {callId}</button>
+    {#if certificate}
+      {#if control.accepted}
+        <button class="button" on:click={next}>Next</button>
+      {:else}
+        <TxActionButton class="button is-primary">Redeem onchain</TxActionButton>
+        <button class="button" on:click={next}>Ignore {callId || ''}</button>
+      {/if}
     {:else}
       {#if recording}
         <div class="field" >

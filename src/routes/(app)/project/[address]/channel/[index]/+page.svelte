@@ -1,13 +1,12 @@
 <script>
-  import { onMount } from 'svelte'
-  import { ethers } from 'ethers'
+  import { onMount, tick } from 'svelte'
 
   import { chainId, chainData } from 'svelte-ethers-store'
 
   import { goto } from '$app/navigation'
+  //import { goto } from '$lib/utils'
 
-  import blockchain, { getChainTokens } from '$lib/blockchain.js'
-  import { types } from '$lib/enums'
+  import { getChainTokens } from '$lib/blockchain.js'
 
   import project from '$stores/project.js'
 
@@ -29,7 +28,9 @@
   let input
 
   const save = async () => {
+    await tick()
     if (!await form.validate()) return
+    await tick()
 
     const { symbol, price, free, ...channel } = input
 
@@ -42,7 +43,9 @@
     project.updateDraft(address, { ...p, channels: updated })
     project.refresh(address)
 
-    goto(`/project/${address}/draft`)
+    // regression to solve XXX
+    // goto(`/project/${address}/draft`)
+    history.go(-1)
   }
 
   onMount(() => {

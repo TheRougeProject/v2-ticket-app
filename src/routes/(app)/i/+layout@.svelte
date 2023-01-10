@@ -18,24 +18,23 @@
   <nav class="navbar is-transparent" role="navigation" aria-label="main navigation">
 
     <div class="navbar-brand" >
-      <a target="_blank" class="navbar-item is-black" alt="Rouge Network" href="https://rouge.network/">
-        <span class="icon is-large">
+      <a class="navbar-item is-black" alt="Rouge Ticket" href="/book">
+        <span class="icon is-large mr-2">
           <img src="/logo.svg" />
         </span>
+        <strong class="is-hidden-mobile mr-2">Rouge Ticket</strong>
+        <span class="tag is-white">beta</span>
       </a>
     </div>
 
     <div class="navbar-brand" >
       {#if $signerAddress}
-        <div class="navbar-item">
+        <div class="navbar-item pr-0">
           <span class="icon-text">
             <span class="icon"><Jazzicon address={$signerAddress} size={24} /></span>
-            <small class="is-hidden-mobile icon-text">{formatAddress($signerAddress)}</small>
+            <small class="is-hidden-mobile">{formatAddress($signerAddress)}</small>
           </span>
         </div>
-        <a class="navbar-item" alt="Rouge Ticket Wallet" href="/wallet">
-          <Icon name="wallet" size="24" />
-        </a>
       {/if}
       {#if $signerAddress && $chainId}
         <div class="navbar-item">
@@ -46,50 +45,59 @@
     </div>
   </nav>
 
-  <div class="container is-max-desktop">
-    <div class="container is-fluid">
-      <div class="box mt-6">
-
-        <slot />
-
-      </div>
-    </div>
-  </div>
+  <slot />
 
 </AppContext>
 
 <style lang="scss">
 
-@import "../../../scss/_variables.scss";
-@import "bulma/sass/utilities/_all";
+  @import "../../../scss/_variables.scss";
+  @import "bulma/sass/utilities/_all";
 
-.container.is-max-desktop {
-  @include mobile {
-    padding-top: 3.5rem;
+  :global(body) {
+    background-color: $grey-standalone;
   }
-  @include tablet {
-    padding: 4rem;
+
+  :global(.version a) {
+      color: #888 !important;
   }
-}
 
-nav {
-  display: flex;
-  align-items: stretch;
-  background-color: transparent;
-
-  .navbar-brand {
-    flex: 1;
-    justify-content: left;
-
-    &:last-child {
-      justify-content: right;
+  .container.is-max-desktop {
+    @include mobile {
+      padding-top: 3.5rem;
+    }
+    @include tablet {
+      padding: 4rem;
     }
   }
 
-}
+  .navbar {
+    background-color: $grey-standalone;
+  }
 
-:global(html) {
-  background-color: $grey-standalone;
-}
+  nav {
+    display: flex;
+    align-items: stretch;
+    background-color: transparent;
+
+    .navbar-brand {
+      flex: 1;
+      justify-content: left;
+
+      &:last-child {
+        justify-content: right;
+      }
+
+      a:hover {
+        color: currentColor;
+      }
+
+    }
+
+  }
+
+  .navbar-item .is-large img {
+    max-height: none;
+  }
 
 </style>

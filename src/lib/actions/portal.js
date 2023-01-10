@@ -8,8 +8,6 @@ import { tick } from "svelte"
  */
 
 export function portal(el, target = "body") {
-
-  console.log('target', target)
   let targetEl
   async function update(newTarget) {
     target = newTarget;

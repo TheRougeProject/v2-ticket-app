@@ -1,17 +1,15 @@
 <script>
   import { onMount } from 'svelte'
-  import { ethers } from 'ethers'
+  import { constants } from 'ethers'
 
   import { signerAddress } from 'svelte-ethers-store'
-  import { Jazzicon, Identicon } from 'svelte-ethers-store/components'
 
-  import { abiEncodeAuth } from '@rouge/contracts/rouge'
+  import { abiEncodeAuth, decodeRoles } from '@rouge/contracts/rouge'
 
   import blockchain from '$lib/blockchain.js'
-  import { types } from '$lib/enums'
+  import { formatAddress } from '$lib/utils'
 
   import project from '$stores/project.js'
-  import tracker from '$stores/tracker.js'
 
   import Account from '$components/design/Account.svelte'
   import Slate from '$components/design/Slate.svelte'
@@ -23,12 +21,16 @@
 
   $: ({ address } = data)
 
-  let calls = []
-  const control = {}
+  const control = { valid: false, error: {} }
+
+  let delegate = $signerAddress
 
   $: p = $project[address] || {}
 
   $: ready = $signerAddress && p.setupManager
+
+  $: delegate = control.valid ? control.delegate : $signerAddress
+
   $: updatable = ready ? $signerAddress === p.setupManager : false
 
   const actions = {}
@@ -37,7 +39,7 @@
   // XXX is there a cleaner lifecyle ?
   $: if (ready) {
     for (const k of Object.keys(selectors)) {
-      // console.log('test invalidation', k)
+      console.log('test invalidation', k)
       if (actions[k]) actions[k].reset()
     }
   }
@@ -52,10 +54,25 @@
     redeem: { icon: 'scanQr', label: 'Ticket scanner [redemption]', delegated: true },
   }
 
-  const authorizeCtx = (selector, grant) => {
+  let roles
+  const refresh = async () => {
+    if (!control.delegate) return
+    const raw = await decodeRoles(blockchain.rouge(address), Object.keys(selectors), control.delegate, p.channels)
+    roles = raw[ p.channels.length ]
+  }
+  const check = () => {
+    control.valid = true
+    refresh()
+  }
+
+  const authorizeCtx = (selector, grant, delegate = constants.AddressZero) => {
     const contract = blockchain.rouge(address)
     const auths = [
-      { scope: contract.interface.getSighash(selector), grant }
+      {
+        scope: contract.interface.getSighash(selector),
+        address: delegate,
+        grant
+      }
     ].map(a => abiEncodeAuth(a))
     return {
       label: 'Transaction tracker...',
@@ -64,38 +81,33 @@
     }
   }
 
-  const dismiss = callId => {
-    calls = calls.filter(c => c !== callId)
-  }
-
-
 </script>
 
+<h2 class="title">State</h2>
 
+<Slate>
+  <span class="icon-text">
+    <Icon name="UserExclamation" size="24" />
+    <span>Manager at creation</span>
+  </span>
 
-  <h2 class="title">State</h2>
+  <div slot="info">
+    <Account address={p.setupManager} />
+  </div>
+</Slate>
 
-  <Slate>
-    <span class="icon-text">
-      <Icon name="UserExclamation" size="24" />
-      <span>Manager at creation</span>
-    </span>
-
-    <div slot="info">
-      <Account address={p.setupManager} />
-    </div>
-  </Slate>
-
-  {#if ready && !updatable}
+{#if ready && !updatable}
   <article class="message is-danger">
     <div class="message-body">
       You are not a manager of this event, so you cannot change its state
     </div>
   </article>
-  {/if}
+{/if}
 
-  {#each Object.keys(selectors) as k}
 
+<h2 class="title">global permissions</h2>
+
+{#each Object.keys(selectors) as k}
   <Slate>
     <span class="icon-text">
       <Icon name={selectors[k].icon} size="24" />
@@ -104,15 +116,15 @@
 
     <div slot="info">
       {#if p.state.enabled[k]}
-      <span class="icon-text has-text-success">
-        <Icon name="check" size="24" />
-        <p class="subtitle heading pl-2">enabled</p>
-      </span>
+        <span class="icon-text has-text-success">
+          <Icon name="check" size="24" />
+          <p class="subtitle heading pl-2">enabled</p>
+        </span>
       {:else}
-      <span class="icon-text has-text-danger">
-        <Icon name="lock" size="24" />
-        <p class="subtitle heading pl-2">disabled</p>
-      </span>
+        <span class="icon-text has-text-danger">
+          <Icon name="lock" size="24" />
+          <p class="subtitle heading pl-2">disabled</p>
+        </span>
       {/if}
     </div>
 
@@ -122,9 +134,54 @@
       </TxButton>
     </div>
   </Slate>
+{/each}
 
+
+<p class="mt-4">You can also check {#if updatable}and update {/if} authorizations for specific address</p>
+
+<div class="field has-addons">
+  <div class="control">
+    <input bind:value={control.delegate} class="input" type="text" size="50" placeholder="Ethereum address">
+  </div>
+  <div class="control">
+    <a class="button is-black" on:click={check}>
+      Check
+    </a>
+  </div>
+  {#if control.error.selected}<p class="help is-danger">{control.error.selected}</p>{/if}
+</div>
+
+{#if control.valid && roles}
+
+  <h2 class="title">{formatAddress(delegate)} authorizations</h2>
+
+  {#each Object.keys(selectors) as k}
+    <Slate>
+      <span class="icon-text">
+        <Icon name={selectors[k].icon} size="24" />
+        <span>{selectors[k].label}</span>
+      </span>
+
+      <div slot="info">
+        {#if roles[k]}
+          <span class="icon-text has-text-success">
+            <Icon name="check" size="24" />
+            <p class="subtitle heading pl-2">authorized</p>
+          </span>
+        {:else}
+          <span class="icon-text has-text-danger">
+            <Icon name="lock" size="24" />
+            <p class="subtitle heading pl-2">unauthorized</p>
+          </span>
+        {/if}
+      </div>
+
+      <div slot="actions">
+        <TxButton on:success={refresh} class="button is-outlined is-primary" disabled={!updatable} disabledHelp="no permissions" submitCtx={() => authorizeCtx(k, !roles[k], delegate)}>
+          {#if roles[k]}Unauthorize{:else}Authorize{/if}
+        </TxButton>
+      </div>
+    </Slate>
   {/each}
 
-  {#each calls as callId}
-  <TxSteps {callId} on:close={() => dismiss(callId)}/>
-  {/each}
+{/if}

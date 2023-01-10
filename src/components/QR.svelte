@@ -1,28 +1,28 @@
 <script>
-  import { onMount } from 'svelte'
-
   import { AwesomeQR } from 'awesome-qr'
 
   export let text
-  export let src
+  export let src = undefined
+  export let color = "#000"
 
   let importedClasses = 'is-square'
   export { importedClasses as class }
 
   let img
 
-  onMount(() => {
+  $: if (text) {
     new AwesomeQR({
-      text
+      text,
       //size: 500,
+      colorDark: color,
     }).draw().then(dataURL => { img.src = dataURL; src = dataURL })
-  })
+  }
 
 </script>
 
 <div>
   <figure class="image {importedClasses}">
-    <img bind:this={img} src="">
+    <img bind:this={img} >
   </figure>
 </div>
 

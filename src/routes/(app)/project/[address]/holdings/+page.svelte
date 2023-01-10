@@ -22,16 +22,22 @@
   $: p = $project[address] || {}
 
   const withdrawCtx = token => {
-      if (token === constants.AddressZero) {
-          return {
-              call: blockchain.rouge(address).widthdraw,
-              params: [ $signerAddress, p.balances[token].number ],
-          }
-      }
+    if (token === constants.AddressZero) {
       return {
-          call: blockchain.rouge(address).widthdrawToken,
-          params: [ token, $signerAddress, p.balances[token].number],
+        call: blockchain.rouge(address).widthdraw,
+        params: [ $signerAddress, p.balances[token].number ],
+        onReceipt: () => {
+          project.refresh(address)
+        }
       }
+    }
+    return {
+      call: blockchain.rouge(address).widthdrawToken,
+      params: [ token, $signerAddress, p.balances[token].number],
+      onReceipt: () => {
+        project.refresh(address)
+      }
+    }
   }
 
 </script>

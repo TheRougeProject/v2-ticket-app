@@ -1,6 +1,11 @@
 
+// ########## .button ##################################################
+
 .button {
-    &.is-primary {
+
+  font-weight: $weight-semibold;
+
+  &.is-primary {
         &:hover, &.is-hovered {
             background-color: $primary-hover;
         }
@@ -15,8 +20,7 @@
             }
         }
     }
-}
-.button {
+
     &.is-secondary {
         background-color: $secondary;
         &:hover, &.is-hovered {
@@ -35,6 +39,7 @@
     }
 }
 
+// ########## manager nac ##################################################
 
 // ########## 2 modes breadcrumb ##################################################
 
@@ -43,10 +48,42 @@ html {
     background-color: $white;
 }
 
+.manager-nav {
+
+  .level-right {
+
+    a {
+      color: $white;
+
+      &:hover, &.is-hovered {
+        color: $secondary-disabled;
+      }
+
+    }
+
+    @include mobile {
+    a {
+      color: $primary;
+
+      &:hover, &.is-hovered {
+        color: $primary-hover;
+      }
+
+    }
+
+    }
+
+
+  }
+
+}
+
+
 .breadcrumb  {
 
   @include tablet {
 
+      padding-bottom: 1.5rem; // same as columns
 
       //$breadcrumb-item-color: $white;
       //$breadcrumb-item-active-color: $secondary-disabled;
@@ -96,6 +133,17 @@ html {
 .breadcrumb {
     padding-top: 1.5rem; // default bottom margin is 1.5rem
 }
+
+// ########## rounded identicon ##################################################
+
+.icon {
+  &.is-rounded {
+    img {
+      border-radius: 50%;
+    }
+  }
+}
+
 
 // ########## OLD ##################################################
 
